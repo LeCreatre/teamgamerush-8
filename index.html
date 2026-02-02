@@ -3,209 +3,389 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TEAM Runner 9:16</title>
+    <title>TEAM City Run</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        /* --- CSS СТИЛИ --- */
+        :root {
+            --primary: #FF4B2B; /* Яркий оранжево-красный */
+            --secondary: #2B32B2; /* Глубокий синий */
+            --ui-bg: rgba(255, 255, 255, 0.9);
+            --font-main: 'Rubik', sans-serif;
+        }
+
         body {
             margin: 0;
             padding: 0;
-            background-color: #222; /* Темный фон вокруг игры */
-            overflow: hidden; /* Отключаем скролл */
-            font-family: 'Arial', sans-serif;
+            background-color: #1a1a1a;
+            overflow: hidden;
+            font-family: var(--font-main);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            touch-action: none; /* Отключаем стандартные жесты */
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
-        #game-container {
+        #game-wrapper {
             position: relative;
             width: 100%;
             height: 100%;
-            /* Ограничение ширины для ПК, чтобы сохранить пропорцию мобильного */
-            max-width: 450px; 
-            background: linear-gradient(to bottom, #ffffff, #eef2f3);
+            max-width: 480px; /* Формат мобилки */
+            background: linear-gradient(180deg, #1488CC, #2B32B2); /* Небо */
             overflow: hidden;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
 
         canvas {
             display: block;
             width: 100%;
             height: 100%;
+            z-index: 1;
         }
 
-        /* Интерфейс (UI) */
+        /* --- UI СЛОЙ --- */
         .ui-layer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none; /* Клики проходят сквозь текст */
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        .score-board {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            text-shadow: 1px 1px 0 #fff;
-        }
-
-        .high-score {
-            font-size: 16px; 
-            color: #777;
-            margin-top: 6px;
-        }
-
-        /* Экраны меню */
-        #start-screen, #game-over-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.9);
+            z-index: 10;
+            pointer-events: none;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            pointer-events: auto; /* Включаем клики для кнопок */
-            z-index: 10;
+        }
+
+        /* Счет во время игры */
+        .hud {
+            position: absolute;
+            top: 40px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .score-pill {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 18px;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        /* Экраны Меню */
+        .screen {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            padding: 40px 30px;
+            border-radius: 30px;
+            text-align: center;
+            width: 80%;
+            max-width: 320px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            pointer-events: auto;
+            transform: scale(1);
+            transition: opacity 0.3s, transform 0.3s;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .screen.hidden {
+            opacity: 0;
+            transform: scale(0.9);
+            pointer-events: none;
+            display: none; /* Полностью скрываем, чтобы не мешал кликам */
         }
 
         h1 {
-            color: #1a237e; /* TEAM University Blue */
+            color: var(--secondary);
             font-size: 32px;
-            margin-bottom: 10px;
-            text-align: center;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            font-weight: 900;
+            letter-spacing: -1px;
+            line-height: 1;
         }
 
-        .game-over-text {
-            color: #d32f2f;
+        h1 span {
+            color: var(--primary);
         }
 
         p {
             color: #555;
-            font-size: 18px;
-            text-align: center;
+            font-size: 16px;
+            margin-bottom: 30px;
+            line-height: 1.4;
         }
 
+        .big-score {
+            font-size: 48px;
+            color: var(--secondary);
+            font-weight: 900;
+            margin: 10px 0;
+            display: block;
+        }
+
+        /* КНОПКИ */
         .btn {
-            background-color: #1a237e;
+            background: linear-gradient(45deg, var(--secondary), #4553ff);
             color: white;
-            padding: 15px 50px;
-            font-size: 20px;
             border: none;
+            padding: 18px 40px;
             border-radius: 50px;
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             cursor: pointer;
-            margin-top: 30px;
-            box-shadow: 0 6px 20px rgba(26, 35, 126, 0.4);
-            transition: transform 0.1s;
-            font-weight: bold;
+            box-shadow: 0 10px 20px rgba(43, 50, 178, 0.4);
+            transition: all 0.2s;
+            width: 100%;
+            font-family: var(--font-main);
+            position: relative;
+            overflow: hidden;
         }
 
         .btn:active {
-            transform: scale(0.95);
+            transform: scale(0.96);
+            box-shadow: 0 4px 10px rgba(43, 50, 178, 0.3);
         }
 
-        .hidden {
-            display: none !important;
+        /* Эффект блика на кнопке */
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: 0.5s;
         }
+        .btn:hover::after {
+            left: 100%;
+        }
+
+        /* Футер в меню */
+        .footer-info {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        /* Анимация тряски экрана при ударе */
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
     </style>
 </head>
 <body>
 
-<div id="game-container">
+<div id="game-wrapper">
     <canvas id="gameCanvas"></canvas>
 
-    <div class="ui-layer">
-        <div class="score-board">
-            <span>Score: <span id="score">0</span></span>
-            <span class="high-score">HI: <span id="highScore">0</span></span>
+    <div class="ui-layer" id="hud-layer" style="justify-content: flex-start; pointer-events: none; opacity: 0;">
+        <div class="hud">
+            <div class="score-pill">🏆 <span id="score">0</span></div>
+            <div class="score-pill" style="font-size: 14px; opacity: 0.8;">BEST: <span id="highScore">0</span></div>
         </div>
     </div>
 
-    <div id="start-screen">
-        <h1>TEAM Runner</h1>
-        <p>Тапай, чтобы прыгать</p>
-        <button class="btn" id="startBtn">Играть</button>
+    <div class="ui-layer">
+        <div id="start-screen" class="screen">
+            <h1>TEAM <span>RUN</span></h1>
+            <p>Доберись до университета вовремя! Избегай препятствий.</p>
+            <button class="btn" id="startBtn">Погнали</button>
+            <div class="footer-info">Tap to Jump • Ver 2.0</div>
+        </div>
     </div>
 
-    <div id="game-over-screen" class="hidden">
-        <h1 class="game-over-text">Game Over</h1>
-        <p>Твой результат: <span id="final-score">0</span></p>
-        <button class="btn" id="restartBtn">Заново</button>
+    <div class="ui-layer">
+        <div id="game-over-screen" class="screen hidden">
+            <h1 style="font-size: 24px;">Ой, опоздал!</h1>
+            <p style="margin-bottom: 10px;">Твой результат:</p>
+            <span class="big-score" id="final-score">0</span>
+            <button class="btn" id="restartBtn">Еще раз</button>
+        </div>
     </div>
 </div>
 
 <script>
-    /* --- JAVASCRIPT ЛОГИКА --- */
+    /* --- НАСТРОЙКИ --- */
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+    const wrapper = document.getElementById('game-wrapper');
 
-    // UI элементы
+    // UI
     const scoreEl = document.getElementById('score');
     const highScoreEl = document.getElementById('highScore');
     const finalScoreEl = document.getElementById('final-score');
     const startScreen = document.getElementById('start-screen');
     const gameOverScreen = document.getElementById('game-over-screen');
+    const hudLayer = document.getElementById('hud-layer');
     const startBtn = document.getElementById('startBtn');
     const restartBtn = document.getElementById('restartBtn');
 
-    // Настройки игры
-    let gameSpeed = 5;
-    let score = 0;
-    let highScore = localStorage.getItem('teamRunnerHighScore') || 0;
-    let isGameRunning = false;
-    let frameId;
-    let lastTime = 0;
-    let groundY;
+    // Состояние игры
+    let state = {
+        running: false,
+        speed: 6,
+        score: 0,
+        highScore: localStorage.getItem('teamCityRunHI') || 0,
+        frames: 0,
+        groundY: 0
+    };
 
-    // --- АДАПТИВНОСТЬ ---
+    // --- РЕСАЙЗ ---
     function resize() {
-        const container = document.getElementById('game-container');
-        canvas.width = container.offsetWidth;
-        canvas.height = container.offsetHeight;
-        groundY = canvas.height - 50; // Уровень земли
+        canvas.width = wrapper.offsetWidth;
+        canvas.height = wrapper.offsetHeight;
+        state.groundY = canvas.height - 80; // Земля немного выше
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // --- ОБЪЕКТЫ ---
+
+    // 1. ЧАСТИЦЫ (ПЫЛЬ ПРИ ПРЫЖКЕ)
+    const particles = [];
+    class Particle {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.size = Math.random() * 5 + 2;
+            this.speedX = Math.random() * 2 - 1;
+            this.speedY = Math.random() * -2 - 1;
+            this.color = `rgba(255, 255, 255, ${Math.random() * 0.5 + 0.2})`;
+            this.life = 1; // Жизнь от 1 до 0
+        }
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+            this.life -= 0.05;
+            this.size *= 0.95;
+        }
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    function spawnDust(x, y) {
+        for(let i=0; i<5; i++) particles.push(new Particle(x, y));
     }
 
-    // --- ИГРОК (Dino) ---
-    const dino = {
-        x: 30, // Сдвинут влево для вертикального экрана
+    // 2. ФОН (ПАРАЛЛАКС ГОРОД)
+    const bgBuildings = [];
+    class Building {
+        constructor() {
+            this.w = Math.random() * 50 + 30;
+            this.h = Math.random() * 150 + 50; // Высота зданий
+            this.x = canvas.width + Math.random() * 100;
+            this.y = state.groundY - this.h;
+            // Разные оттенки для глубины
+            const shade = Math.floor(Math.random() * 50) + 200; 
+            this.color = `rgba(255, 255, 255, 0.15)`; // Полупрозрачные белые силуэты
+        }
+        update() {
+            this.x -= state.speed * 0.3; // Двигаются медленнее
+            if(this.x + this.w < 0) {
+                this.x = canvas.width + Math.random() * 50;
+                this.h = Math.random() * 200 + 50;
+                this.y = state.groundY - this.h;
+            }
+        }
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.w, this.h);
+            // Окошки
+            ctx.fillStyle = "rgba(255,255,255,0.1)";
+            for(let iy = this.y + 10; iy < state.groundY; iy += 20) {
+                if(Math.random() > 0.5) ctx.fillRect(this.x + 5, iy, this.w - 10, 10);
+            }
+        }
+    }
+    // Заполним город
+    for(let i=0; i<6; i++) bgBuildings.push(new Building());
+
+
+    // 3. ГЕРОЙ (Студент)
+    const hero = {
+        x: 40,
         y: 0,
-        width: 40,
-        height: 40,
+        w: 30,
+        h: 50,
         dy: 0,
-        jumpForce: 13,
-        gravity: 0.6,
+        jumpForce: 13, // Сила прыжка
+        gravity: 0.65,
         grounded: false,
-        color: '#1a237e', // Цвет игрока
+        legAnim: 0,
 
         draw: function() {
-            // Рисуем квадрат (или замените на картинку)
-            ctx.fillStyle = this.color;
-            ctx.fillRect(this.x, this.y, this.width, this.height);
+            // Рисуем человечка кодом
+            const x = this.x;
+            const y = this.y;
             
-            // Простые глаза для направления
-            ctx.fillStyle = "white";
-            ctx.fillRect(this.x + 25, this.y + 5, 8, 8);
-        },
+            ctx.save();
+            
+            // Тень
+            ctx.fillStyle = "rgba(0,0,0,0.2)";
+            ctx.beginPath();
+            ctx.ellipse(x + 15, y + 50, 15, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
 
-        jump: function() {
-            if (this.grounded) {
-                this.dy = -this.jumpForce;
-                this.grounded = false;
+            // Ноги (Анимация бега)
+            ctx.fillStyle = "#333";
+            const legOffset = Math.sin(this.legAnim) * 10;
+            if(this.grounded) {
+                ctx.fillRect(x + 5, y + 35, 8, 15 + legOffset); // Левая
+                ctx.fillRect(x + 18, y + 35, 8, 15 - legOffset); // Правая
+            } else {
+                // Поза прыжка
+                ctx.fillRect(x + 5, y + 35, 8, 10);
+                ctx.fillRect(x + 18, y + 30, 8, 10);
             }
+
+            // Тело (Футболка)
+            ctx.fillStyle = "#FF4B2B"; // Оранжевая футболка
+            ctx.fillRect(x, y + 15, 30, 25);
+            
+            // Рюкзак
+            ctx.fillStyle = "#2B32B2"; // Синий рюкзак
+            ctx.fillRect(x - 8, y + 18, 8, 20);
+
+            // Голова
+            ctx.fillStyle = "#f1c27d"; // Кожа
+            ctx.beginPath();
+            ctx.arc(x + 15, y + 10, 12, 0, Math.PI*2);
+            ctx.fill();
+
+            // Кепка/Волосы
+            ctx.fillStyle = "#333";
+            ctx.beginPath();
+            ctx.arc(x + 15, y + 8, 12, Math.PI, 0); // Шапка
+            ctx.fill();
+            ctx.fillRect(x+15, y+5, 15, 4); // Козырек
+
+            ctx.restore();
         },
 
         update: function() {
@@ -213,161 +393,225 @@
             this.dy += this.gravity;
             this.y += this.dy;
 
-            // Столкновение с землей
-            if (this.y + this.height > groundY) {
-                this.y = groundY - this.height;
+            // Земля
+            if (this.y + this.h > state.groundY) {
+                if(!this.grounded) {
+                    spawnDust(this.x + 15, state.groundY); // Эффект приземления
+                }
+                this.y = state.groundY - this.h;
                 this.dy = 0;
                 this.grounded = true;
             } else {
                 this.grounded = false;
             }
+
+            // Анимация ног
+            if(state.running) this.legAnim += 0.3;
+        },
+
+        jump: function() {
+            if (this.grounded) {
+                this.dy = -this.jumpForce;
+                this.grounded = false;
+                spawnDust(this.x + 15, state.groundY); // Эффект прыжка
+            }
         }
     };
 
-    // --- ПРЕПЯТСТВИЯ ---
+    // 4. ПРЕПЯТСТВИЯ
     const obstacles = [];
-    let obstacleTimer = 0;
-    let obstacleInterval = 1500;
+    let obsTimer = 0;
 
     class Obstacle {
         constructor() {
-            this.width = 40 + Math.random() * 20;
-            this.height = 40 + Math.random() * 40;
+            this.w = 40;
+            this.h = 40 + Math.random() * 30; // Разная высота
             this.x = canvas.width;
-            this.y = groundY - this.height;
-            this.color = '#d32f2f'; // Цвет препятствия
+            this.y = state.groundY - this.h;
             this.markedForDeletion = false;
+            this.type = Math.random() > 0.5 ? 'box' : 'barrier';
         }
 
         update() {
-            this.x -= gameSpeed;
-            // Если ушло за левый край
-            if (this.x + this.width < 0) {
+            this.x -= state.speed;
+            if (this.x + this.w < 0) {
                 this.markedForDeletion = true;
-                score++;
-                scoreEl.innerText = score;
+                state.score++;
+                scoreEl.innerText = state.score;
+                
                 // Ускорение игры
-                if (score % 5 === 0) {
-                    gameSpeed += 0.5;
-                }
+                if (state.score % 10 === 0) state.speed += 0.2;
             }
         }
 
         draw() {
-            ctx.fillStyle = this.color;
-            ctx.fillRect(this.x, this.y, this.width, this.height);
+            const x = this.x;
+            const y = this.y;
+            const w = this.w;
+            const h = this.h;
+
+            // Рисуем стилизованную коробку/ящик
+            ctx.fillStyle = "#E65100"; // Темно-оранжевый
+            ctx.fillRect(x, y, w, h);
+            
+            // Детали (крест или полоски)
+            ctx.fillStyle = "rgba(0,0,0,0.2)";
+            ctx.fillRect(x + 5, y + 5, w - 10, h - 10);
+            
+            // Знак "Опасно" (полоски)
+            ctx.fillStyle = "#FFD600";
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x+10, y);
+            ctx.lineTo(x, y+10);
+            ctx.fill();
         }
     }
 
-    // --- УПРАВЛЕНИЕ ---
-    function handleInput(e) {
-        // Space или Тап по экрану
-        if ((e.type === 'keydown' && e.code === 'Space') || e.type === 'touchstart' || e.type === 'mousedown') {
-             // Блокируем зум и скролл при тапе
-             if (e.cancelable && e.type === 'touchstart') e.preventDefault(); 
-             
-             if (isGameRunning) {
-                 dino.jump();
-             }
-        }
+    // --- ЛОГИКА ИГРЫ ---
+
+    function resetGame() {
+        state.running = true;
+        state.score = 0;
+        state.speed = 6;
+        state.frames = 0;
+        
+        obstacles.length = 0;
+        particles.length = 0;
+        hero.y = state.groundY - hero.h;
+        hero.dy = 0;
+
+        scoreEl.innerText = "0";
+        highScoreEl.innerText = state.highScore;
+
+        startScreen.classList.add('hidden');
+        gameOverScreen.classList.add('hidden');
+        hudLayer.style.opacity = 1;
+        
+        wrapper.classList.remove('shake');
+        
+        loop();
     }
 
-    window.addEventListener('keydown', handleInput);
-    window.addEventListener('touchstart', handleInput, {passive: false});
-    window.addEventListener('mousedown', handleInput);
+    function gameOver() {
+        state.running = false;
+        
+        // Вибрация и тряска
+        if(navigator.vibrate) navigator.vibrate(200);
+        wrapper.classList.add('shake');
 
-    // --- ИГРОВОЙ ЦИКЛ (LOOP) ---
-    function animate(timestamp) {
-        if (!isGameRunning) return;
+        if(state.score > state.highScore) {
+            state.highScore = state.score;
+            localStorage.setItem('teamCityRunHI', state.highScore);
+        }
+        
+        finalScoreEl.innerText = state.score;
+        hudLayer.style.opacity = 0;
+        
+        // Небольшая задержка перед показом меню
+        setTimeout(() => {
+            gameOverScreen.classList.remove('hidden');
+        }, 500);
+    }
 
-        const deltaTime = timestamp - lastTime;
-        lastTime = timestamp;
+    function loop() {
+        if(!state.running) return;
 
+        // Очистка
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 1. Рисуем Землю
-        ctx.beginPath();
-        ctx.moveTo(0, groundY);
-        ctx.lineTo(canvas.width, groundY);
-        ctx.strokeStyle = "#555";
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        // 1. Рисуем фон (Небо градиент уже в CSS, здесь рисуем город)
+        bgBuildings.forEach(b => { b.update(); b.draw(); });
 
-        // 2. Спавн препятствий
-        obstacleTimer += deltaTime;
-        if (obstacleTimer > obstacleInterval) {
+        // 2. Рисуем дорогу
+        ctx.fillStyle = "#37474F"; // Асфальт
+        ctx.fillRect(0, state.groundY, canvas.width, canvas.height - state.groundY);
+        // Полоса на дороге
+        ctx.fillStyle = "#FFF"; 
+        ctx.globalAlpha = 0.5;
+        state.frames++;
+        const dashOffset = (state.frames * state.speed) % 40;
+        for(let i = -40; i < canvas.width; i+=40) {
+            ctx.fillRect(i - dashOffset, state.groundY + 20, 20, 4);
+        }
+        ctx.globalAlpha = 1.0;
+
+        // 3. Препятствия
+        obsTimer++;
+        // Рандомный спавн
+        let spawnRate = 100 - (state.speed * 2); 
+        if(spawnRate < 40) spawnRate = 40;
+
+        if (obsTimer > spawnRate + Math.random() * 60) {
             obstacles.push(new Obstacle());
-            obstacleTimer = 0;
-            // Случайный интервал между препятствиями
-            obstacleInterval = 1000 + Math.random() * 1500 - (gameSpeed * 10);
-            if (obstacleInterval < 600) obstacleInterval = 600;
+            obsTimer = 0;
         }
 
-        // 3. Обработка препятствий
         for (let i = obstacles.length - 1; i >= 0; i--) {
-            obstacles[i].update();
-            obstacles[i].draw();
+            let ob = obstacles[i];
+            ob.update();
+            ob.draw();
 
-            // Проверка столкновения
+            // Коллизия (простая прямоугольная)
+            // Чуть уменьшаем хитбокс героя для честности
             if (
-                dino.x < obstacles[i].x + obstacles[i].width &&
-                dino.x + dino.width > obstacles[i].x &&
-                dino.y < obstacles[i].y + obstacles[i].height &&
-                dino.y + dino.height > obstacles[i].y
+                hero.x + 5 < ob.x + ob.w &&
+                hero.x + hero.w - 5 > ob.x &&
+                hero.y + 5 < ob.y + ob.h &&
+                hero.y + hero.h > ob.y
             ) {
                 gameOver();
             }
 
-            if (obstacles[i].markedForDeletion) {
-                obstacles.splice(i, 1);
-            }
+            if (ob.markedForDeletion) obstacles.splice(i, 1);
         }
 
-        // 4. Игрок
-        dino.update();
-        dino.draw();
+        // 4. Герой
+        hero.update();
+        hero.draw();
 
-        frameId = requestAnimationFrame(animate);
-    }
-
-    function startGame() {
-        score = 0;
-        gameSpeed = 5;
-        scoreEl.innerText = score;
-        obstacles.length = 0;
-        isGameRunning = true;
-        startScreen.classList.add('hidden');
-        gameOverScreen.classList.add('hidden');
-        
-        dino.y = groundY - dino.height;
-        dino.dy = 0;
-        
-        lastTime = performance.now();
-        animate(0);
-    }
-
-    function gameOver() {
-        isGameRunning = false;
-        cancelAnimationFrame(frameId);
-        
-        if (score > highScore) {
-            highScore = score;
-            localStorage.setItem('teamRunnerHighScore', highScore);
+        // 5. Частицы
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update();
+            particles[i].draw();
+            if(particles[i].life <= 0) particles.splice(i, 1);
         }
-        highScoreEl.innerText = highScore;
-        finalScoreEl.innerText = score;
 
-        gameOverScreen.classList.remove('hidden');
+        requestAnimationFrame(loop);
     }
 
-    // Инициализация при загрузке
-    startBtn.addEventListener('click', startGame);
-    restartBtn.addEventListener('click', startGame);
+    // --- УПРАВЛЕНИЕ ---
+    function action(e) {
+        // Блокируем стандартные действия (зум, скролл)
+        if(e.cancelable && e.type !== 'click') e.preventDefault(); 
+        
+        if(state.running) {
+            hero.jump();
+        }
+    }
+
+    // Слушатели
+    window.addEventListener('keydown', (e) => {
+        if(e.code === 'Space') action(e);
+    });
     
-    highScoreEl.innerText = highScore;
-    resize();
-    window.addEventListener('resize', resize);
-</script>
+    // Тач зона - весь экран
+    wrapper.addEventListener('touchstart', action, {passive: false});
+    wrapper.addEventListener('mousedown', action);
 
+    // Кнопки меню
+    startBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Чтобы клик по кнопке не вызвал прыжок сразу
+        resetGame();
+    });
+    restartBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        resetGame();
+    });
+
+    // Инициализация High Score
+    highScoreEl.innerText = state.highScore;
+
+</script>
 </body>
 </html>
