@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TEAM Runner 9:16</title>
+    <style>
+        /* --- CSS СТИЛИ --- */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #222; /* Темный фон вокруг игры */
+            overflow: hidden; /* Отключаем скролл */
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            touch-action: none; /* Отключаем стандартные жесты */
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            /* Ограничение ширины для ПК, чтобы сохранить пропорцию мобильного */
+            max-width: 450px; 
+            background: linear-gradient(to bottom, #ffffff, #eef2f3);
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Интерфейс (UI) */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Клики проходят сквозь текст */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .score-board {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            text-shadow: 1px 1px 0 #fff;
+        }
+
+        .high-score {
+            font-size: 16px; 
+            color: #777;
+            margin-top: 6px;
+        }
+
+        /* Экраны меню */
+        #start-screen, #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto; /* Включаем клики для кнопок */
+            z-index: 10;
+        }
+
+        h1 {
+            color: #1a237e; /* TEAM University Blue */
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .game-over-text {
+            color: #d32f2f;
+        }
+
+        p {
+            color: #555;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .btn {
+            background-color: #1a237e;
+            color: white;
+            padding: 15px 50px;
+            font-size: 20px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 30px;
+            box-shadow: 0 6px 20px rgba(26, 35, 126, 0.4);
+            transition: transform 0.1s;
+            font-weight: bold;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="ui-layer">
+        <div class="score-board">
+            <span>Score: <span id="score">0</span></span>
+            <span class="high-score">HI: <span id="highScore">0</span></span>
+        </div>
+    </div>
+
+    <div id="start-screen">
+        <h1>TEAM Runner</h1>
+        <p>Тапай, чтобы прыгать</p>
+        <button class="btn" id="startBtn">Играть</button>
+    </div>
+
+    <div id="game-over-screen" class="hidden">
+        <h1 class="game-over-text">Game Over</h1>
+        <p>Твой результат: <span id="final-score">0</span></p>
+        <button class="btn" id="restartBtn">Заново</button>
+    </div>
+</div>
+
+<script>
+    /* --- JAVASCRIPT ЛОГИКА --- */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // UI элементы
+    const scoreEl = document.getElementById('score');
+    const highScoreEl = document.getElementById('highScore');
+    const finalScoreEl = document.getElementById('final-score');
+    const startScreen = document.getElementById('start-screen');
+    const gameOverScreen = document.getElementById('game-over-screen');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+
+    // Настройки игры
+    let gameSpeed = 5;
+    let score = 0;
+    let highScore = localStorage.getItem('teamRunnerHighScore') || 0;
+    let isGameRunning = false;
+    let frameId;
+    let lastTime = 0;
+    let groundY;
+
+    // --- АДАПТИВНОСТЬ ---
+    function resize() {
+        const container = document.getElementById('game-container');
+        canvas.width = container.offsetWidth;
+        canvas.height = container.offsetHeight;
+        groundY = canvas.height - 50; // Уровень земли
+    }
+
+    // --- ИГРОК (Dino) ---
+    const dino = {
+        x: 30, // Сдвинут влево для вертикального экрана
+        y: 0,
+        width: 40,
+        height: 40,
+        dy: 0,
+        jumpForce: 13,
+        gravity: 0.6,
+        grounded: false,
+        color: '#1a237e', // Цвет игрока
+
+        draw: function() {
+            // Рисуем квадрат (или замените на картинку)
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            
+            // Простые глаза для направления
+            ctx.fillStyle = "white";
+            ctx.fillRect(this.x + 25, this.y + 5, 8, 8);
+        },
+
+        jump: function() {
+            if (this.grounded) {
+                this.dy = -this.jumpForce;
+                this.grounded = false;
+            }
+        },
+
+        update: function() {
+            // Гравитация
+            this.dy += this.gravity;
+            this.y += this.dy;
+
+            // Столкновение с землей
+            if (this.y + this.height > groundY) {
+                this.y = groundY - this.height;
+                this.dy = 0;
+                this.grounded = true;
+            } else {
+                this.grounded = false;
+            }
+        }
+    };
+
+    // --- ПРЕПЯТСТВИЯ ---
+    const obstacles = [];
+    let obstacleTimer = 0;
+    let obstacleInterval = 1500;
+
+    class Obstacle {
+        constructor() {
+            this.width = 40 + Math.random() * 20;
+            this.height = 40 + Math.random() * 40;
+            this.x = canvas.width;
+            this.y = groundY - this.height;
+            this.color = '#d32f2f'; // Цвет препятствия
+            this.markedForDeletion = false;
+        }
+
+        update() {
+            this.x -= gameSpeed;
+            // Если ушло за левый край
+            if (this.x + this.width < 0) {
+                this.markedForDeletion = true;
+                score++;
+                scoreEl.innerText = score;
+                // Ускорение игры
+                if (score % 5 === 0) {
+                    gameSpeed += 0.5;
+                }
+            }
+        }
+
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+
+    // --- УПРАВЛЕНИЕ ---
+    function handleInput(e) {
+        // Space или Тап по экрану
+        if ((e.type === 'keydown' && e.code === 'Space') || e.type === 'touchstart' || e.type === 'mousedown') {
+             // Блокируем зум и скролл при тапе
+             if (e.cancelable && e.type === 'touchstart') e.preventDefault(); 
+             
+             if (isGameRunning) {
+                 dino.jump();
+             }
+        }
+    }
+
+    window.addEventListener('keydown', handleInput);
+    window.addEventListener('touchstart', handleInput, {passive: false});
+    window.addEventListener('mousedown', handleInput);
+
+    // --- ИГРОВОЙ ЦИКЛ (LOOP) ---
+    function animate(timestamp) {
+        if (!isGameRunning) return;
+
+        const deltaTime = timestamp - lastTime;
+        lastTime = timestamp;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 1. Рисуем Землю
+        ctx.beginPath();
+        ctx.moveTo(0, groundY);
+        ctx.lineTo(canvas.width, groundY);
+        ctx.strokeStyle = "#555";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 2. Спавн препятствий
+        obstacleTimer += deltaTime;
+        if (obstacleTimer > obstacleInterval) {
+            obstacles.push(new Obstacle());
+            obstacleTimer = 0;
+            // Случайный интервал между препятствиями
+            obstacleInterval = 1000 + Math.random() * 1500 - (gameSpeed * 10);
+            if (obstacleInterval < 600) obstacleInterval = 600;
+        }
+
+        // 3. Обработка препятствий
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            obstacles[i].update();
+            obstacles[i].draw();
+
+            // Проверка столкновения
+            if (
+                dino.x < obstacles[i].x + obstacles[i].width &&
+                dino.x + dino.width > obstacles[i].x &&
+                dino.y < obstacles[i].y + obstacles[i].height &&
+                dino.y + dino.height > obstacles[i].y
+            ) {
+                gameOver();
+            }
+
+            if (obstacles[i].markedForDeletion) {
+                obstacles.splice(i, 1);
+            }
+        }
+
+        // 4. Игрок
+        dino.update();
+        dino.draw();
+
+        frameId = requestAnimationFrame(animate);
+    }
+
+    function startGame() {
+        score = 0;
+        gameSpeed = 5;
+        scoreEl.innerText = score;
+        obstacles.length = 0;
+        isGameRunning = true;
+        startScreen.classList.add('hidden');
+        gameOverScreen.classList.add('hidden');
+        
+        dino.y = groundY - dino.height;
+        dino.dy = 0;
+        
+        lastTime = performance.now();
+        animate(0);
+    }
+
+    function gameOver() {
+        isGameRunning = false;
+        cancelAnimationFrame(frameId);
+        
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('teamRunnerHighScore', highScore);
+        }
+        highScoreEl.innerText = highScore;
+        finalScoreEl.innerText = score;
+
+        gameOverScreen.classList.remove('hidden');
+    }
+
+    // Инициализация при загрузке
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', startGame);
+    
+    highScoreEl.innerText = highScore;
+    resize();
+    window.addEventListener('resize', resize);
+</script>
+
+</body>
+</html>
